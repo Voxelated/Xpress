@@ -3,7 +3,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.4)
 PROJECT(Xpress)
 
-#==--- Versioning ----------------------------------------------------------==#
+#==--- Versioning -----------------------------------------------------------==#
 
 SET(Xpress_MAJOR_VERSION 0)
 SET(Xpress_MINOR_VERSION 1)
@@ -12,49 +12,29 @@ SET(Xpress_VERSION
   ${Xpress_MAJOR_VERSION}.${Xpress_MINOR_VERSION}.${Xpress_PATCH_VERSION}
 )
 
-#==--- Build Type ----------------------------------------------------------==#
+#==--- Build Type -----------------------------------------------------------==#
 
 IF(NOT CMAKE_BUILD_TYPE) 
-  SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type not specified!")
+  SET(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type not specified!" FORCE)
 ENDIF(NOT CMAKE_BUILD_TYPE)
 
-#==--- Voxel Root ----------------------------------------------------------==#
+#==--- Options --------------------------------------------------------------==#
 
-IF(WIN32)
-  SET(Voxel_ROOT )
-ELSE()
-  SET(Voxel_ROOT /opt/voxel)
-ENDIF(WIN32)
+OPTION(VOXEL_ROOT "Path to Voxel root directory")
 
-#==--- Commandline Options -------------------------------------------------==#
-
-OPTION(Xpress_HEADER_INSTALL_DIR  "Xpress header installation directory"
-       ${Voxel_ROOT}/include/Voxel/)
-OPTION(Xpress_LIB_INSTALL_DIR  "Xpress library installation directory"
-       ${Voxel_ROOT}/lib/)
-
-#==--- Include directories -------------------------------------------------==#
-
-INCLUDE_DIRECTORIES(${Xpress_SOURCE_DIR}/Include 
-                    ${Voxel_ROOT}/include       )
-
-#==--- Subdirectories ------------------------------------------------------==#
-
-ADD_SUBDIRECTORY(Tests)
-ADD_SUBDIRECTORY(Docs)
-
-#==--- Compiler Flags ------------------------------------------------------==#
+#==--- Compiler Flags -------------------------------------------------------==#
 
 IF(WIN32)
   SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O2")
   SET(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} /O2"  )
-ELSEIF()
-  SET(FLAGS "-std=c++1z -O3 -pedantic -Wall -Wextra"               ) 
-  SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${FLAGS}") 
-  SET(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} ${FLAGS}"  )
+ELSE()
+  SET(FLAGS        "-std=c++1z -O3"                                    )
+  SET(DEBUG_FLAGS  "${FLAGS} -Wall -Wextra -Wpedantic -Xcuda-ptxas -v" )
+  SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${FLAGS}"    )
+  SET(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_FLAGS}")
 ENDIF()
 
-#==--- Set CXXFLAGS --------------------------------------------------------==#
+#==--- Set CXXFLAGS ---------------------------------------------------------==#
 
 IF(CMAKE_BUILD_TYPE MATCHES Release)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELEASE}"
@@ -64,16 +44,40 @@ ELSE()
       CACHE STRING "CXX FLAGS" FORCE)
 ENDIF()
 
-#==--- Tests ---------------------------------------------------------------==#
+#==--- Google Test/Mock -----------------------------------------------------==#
 
-SET(TESTS_STRING)
+FIND_PACKAGE(GTest)
 
-#==--- Install -------------------------------------------------------------==#
+#==--- Subdirectories -------------------------------------------------------==#
 
-INSTALL(DIRECTORY ${Xpress_SOURCE_DIR}/Include/Voxel
-        DESTINATION ${Xpress_HEADER_INSTALL_DIR})
+ADD_SUBDIRECTORY(Docs)
 
-#==--- Print Configuration -------------------------------------------------==#
+#==--- Install --------------------------------------------------------------==#
+
+IF(${VOXEL_ROOT} MATCHES OFF)
+  MESSAGE("\nWARNING:\n\t VOXEL_ROOT not specified, using the default.\n")
+  IF(WIN32)
+    SET(VOXEL_ROOT)
+  ELSE()
+    SET(VOXEL_ROOT /opt/voxel)
+  ENDIF()
+ENDIF()
+
+IF(${CMAKE_INSTALL_PREFIX} MATCHES ${VOXEL_ROOT})
+ELSE()
+  MESSAGE("\nWARNING:\n\tInstallation prefix does not match VOXEL_ROOT!")
+  MESSAGE("\tUse -DCMAKE_INSTALL_PREFIX=/path/to/voxel/root\n")
+ENDIF()
+
+INSTALL(DIRECTORY ${Xpress_SOURCE_DIR}/Include/Voxel/Xpress
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/include/Voxel/)
+
+#==--- Include directories --------------------------------------------------==#
+
+INCLUDE_DIRECTORIES(${Xpress_SOURCE_DIR}/Include 
+                    ${VOXEL_ROOT}/include       )
+
+#==--- Print Configuration --------------------------------------------------==#
 
 MESSAGE("|==--- CONFIGURATION --------------------------------------------==|")
 MESSAGE("| XPRESS VERSION          : ${Xpress_VERSION}"                       )
@@ -81,8 +85,7 @@ MESSAGE("| BUILD TYPE              : ${CMAKE_BUILD_TYPE}"                     )
 MESSAGE("| CMAKE_CXX_FLAGS_RELEASE : ${CMAKE_CXX_FLAGS_RELEASE}"              )
 MESSAGE("| CMAKE_CXX_FLAGS_DEBUG   : ${CMAKE_CXX_FLAGS_DEBUG}"                )
 MESSAGE("| CMAKE_CXX_FLAGS         : ${CMAKE_CXX_FLAGS}"                      )
-MESSAGE("| HEADER INSTALL DIR      : ${Xpress_HEADER_INSTALL_DIR}"            )
-MESSAGE("| LIB INSTALL DIR         : ${Xpress_LIB_INSTALL_DIR}"               )
-MESSAGE("| GENERATE ASSEMBLY       : ${GENERATE_ASM}"                         )
-MESSAGE("| TESTS                   : ${TESTS_STRING}"                         )
+MESSAGE("| CMAKE_INSTALL_PREFIX    : ${CMAKE_INSTALL_PREFIX}"                 )
+MESSAGE("| VOXEL_ROOT              : ${VOXEL_ROOT}"                           )
+MESSAGE("| GTEST FOUND             : ${GTEST_FOUND}"                          )
 MESSAGE("|==--------------------------------------------------------------==|")

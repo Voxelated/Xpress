@@ -1,4 +1,4 @@
-//==--- Xpress/Array/ArrayFwd.hpp ------------------------- -*- C++ -*- ---==//
+//==--- Xpress/Array/ArrayFwd.hpp -------------------------- -*- C++ -*- ---==//
 //            
 //                                Voxel : Xpress 
 //
@@ -6,12 +6,12 @@
 //  
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
-//==-----------------------------------------------------------------------==//
+//==------------------------------------------------------------------------==//
 //
 /// \file  ArrayFwd.hpp
 /// \brief This file defines forward declarations for an Array class.
 //
-//==-----------------------------------------------------------------------==//
+//==------------------------------------------------------------------------==//
 
 #ifndef VOXX_XPRESS_ARRAY_ARRAY_FWD_HPP
 #define VOXX_XPRESS_ARRAY_ARRAY_FWD_HPP

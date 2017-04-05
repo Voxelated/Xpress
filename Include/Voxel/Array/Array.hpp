@@ -81,15 +81,15 @@ class Array {
   /// 
   /// \param[in]  value   The value for the first element in the array.
   /// \param[in]  values  The values of the rest of the elements in the array.
-  /// \tparam     Arg     The type of the first value.
-  /// \tparam     Args    The types of the rest of the values for the array.
+  /// \tparam     Value   The type of the first value.
+  /// \tparam     Values  The types of the rest of the values for the array.
   /// \tparam     Enable  Enables/disables this overload.
-  template <typename    Arg                                       ,
-            typename... Args                                      ,
-            typename    Enable = std::enable_if_t<isValueType<Arg>>
-  VoxxDeviceHost constexpr Array(Arg&& value, Args&&... values)
-  :   Data{std::forward<Arg>(value), std::forward<Args>(values)...} {
-    static_assert(sizeof...(Sizes) + 1 == Elements        ,
+  template <typename    Value                                       ,
+            typename... Values                                      ,
+            typename    Enable = std::enable_if_t<isValueType<Value>>
+  VoxxDeviceHost constexpr Array(Value&& value, Values&&... values)
+  :   Data{std::forward<Value>(value), std::forward<Values>(values)...} {
+    static_assert(sizeof...(Values) + 1 == Elements        ,
                   "Incorrect number of elements for array");
   }
 
@@ -100,7 +100,7 @@ class Array {
   /// \todo Add compile time check for operator[] for container.
   /// \param[in]  container   The container to create the array from.
   /// \tparam     Container   The type of the container.
-  /// \tparam     Enable      Enables/disables this overload.
+  /// \tparam     Enable      Enables/disables this overload.s
   template <typename Container                                         ,
             typename Enable = std::enable_if_t<!isValueType<Container>>>
   VoxxDeviceHost constexpr Array(Container&& container) {
