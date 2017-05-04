@@ -1,88 +1,127 @@
 #==--- Xpress/CMakeLists.txt ------------------------------------------------==#
 
-CMAKE_MINIMUM_REQUIRED(VERSION 3.4)
-PROJECT(Xpress)
+cmake_minimum_required(VERSION 3.4)
+project(Xpress)
 
-#==--- Versioning ----------------------------------------------------------==#
+#==--- Versioning -----------------------------------------------------------==#
 
-SET(Xpress_MAJOR_VERSION 0)
-SET(Xpress_MINOR_VERSION 1)
-SET(Xpress_PATCH_VERSION 0)
-SET(Xpress_VERSION
-  ${Xpress_MAJOR_VERSION}.${Xpress_MINOR_VERSION}.${Xpress_PATCH_VERSION}
-)
+set(Xpress_VERSION 0.1.0)
 
-#==--- Build Type ----------------------------------------------------------==#
+#==--- Build Type -----------------------------------------------------------==#
 
-IF(NOT CMAKE_BUILD_TYPE) 
-  SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type not specified!")
-ENDIF(NOT CMAKE_BUILD_TYPE)
+option(GENERATE_SYSTEM_INFO "Can generate system info" TRUE)
+if(NOT CMAKE_BUILD_TYPE) 
+  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type not specified!" FORCE)
+endif(NOT CMAKE_BUILD_TYPE)
 
-#==--- Voxel Root ----------------------------------------------------------==#
+# Check if the install prefix has Voxel appended, and if not, then add it:
+string(REGEX MATCH ".*Voxel?" PREFIX_MATCH "${CMAKE_INSTALL_PREFIX}")
+if ("${PREFIX_MATCH}" STREQUAL "")
+  set(CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/Voxel" CACHE STRING
+      "Install prefix" FORCE)
+endif()
 
-IF(WIN32)
-  SET(Voxel_ROOT )
-ELSE()
-  SET(Voxel_ROOT /opt/voxel)
-ENDIF(WIN32)
+#==--- Options --------------------------------------------------------------==#
 
-#==--- Commandline Options -------------------------------------------------==#
+set(CMAKE_CXX_COMPILER clang++)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${Xpress_SOURCE_DIR}/cmake)
+#include(VoxelSystemInfo)
 
-OPTION(Xpress_HEADER_INSTALL_DIR  "Xpress header installation directory"
-       ${Voxel_ROOT}/include/Voxel/)
-OPTION(Xpress_LIB_INSTALL_DIR  "Xpress library installation directory"
-       ${Voxel_ROOT}/lib/)
+#==--- Packages -------------------------------------------------------------==#
 
-#==--- Include directories -------------------------------------------------==#
+find_package(Voxel REQUIRED)
 
-INCLUDE_DIRECTORIES(${Xpress_SOURCE_DIR}/Include 
-                    ${Voxel_ROOT}/include       )
+#==--- Compiler Flags -------------------------------------------------------==#
 
-#==--- Subdirectories ------------------------------------------------------==#
+if(WIN32)
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O2")
+  set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} /O2"  )
+else()
+  set(FLAGS        "-std=c++1z -O3"                                     )
+  set(DEBUG_FLAGS  "${FLAGS} -Wall -Wextra -Wpedantic ${CXX_CUDA_FLAGS}")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${FLAGS}"     )
+  set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_FLAGS}" )
+endif()
 
-ADD_SUBDIRECTORY(Tests)
-ADD_SUBDIRECTORY(Docs)
+#==--- Set CXXFLAGS ---------------------------------------------------------==#
 
-#==--- Compiler Flags ------------------------------------------------------==#
-
-IF(WIN32)
-  SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O2")
-  SET(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} /O2"  )
-ELSEIF()
-  SET(FLAGS "-std=c++1z -O3 -pedantic -Wall -Wextra"               ) 
-  SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${FLAGS}") 
-  SET(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} ${FLAGS}"  )
-ENDIF()
-
-#==--- Set CXXFLAGS --------------------------------------------------------==#
-
-IF(CMAKE_BUILD_TYPE MATCHES Release)
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELEASE}"
+if(CMAKE_BUILD_TYPE MATCHES Release)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELEASE}"
       CACHE STRING "CXX FLAGS" FORCE)
-ELSE()
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_DEBUG}"
-      CACHE STRING "CXX FLAGS" FORCE)
-ENDIF()
+else()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_DEBUG}" CACHE STRING "CXX FLAGS" FORCE)
+endif()
 
-#==--- Tests ---------------------------------------------------------------==#
+#==--- Header install -------------------------------------------------------==#
 
-SET(TESTS_STRING)
+install(DIRECTORY   ${Xpress_SOURCE_DIR}/include/Voxel/Xpress
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/include/Voxel/)
 
-#==--- Install -------------------------------------------------------------==#
+#==--- Subdirectories -------------------------------------------------------==#
 
-INSTALL(DIRECTORY ${Xpress_SOURCE_DIR}/Include/Voxel
-        DESTINATION ${Xpress_HEADER_INSTALL_DIR})
+add_subdirectory(docs)
+add_subdirectory(tests)
 
-#==--- Print Configuration -------------------------------------------------==#
+#==--- Install --------------------------------------------------------------==#
 
-MESSAGE("|==--- CONFIGURATION --------------------------------------------==|")
-MESSAGE("| XPRESS VERSION          : ${Xpress_VERSION}"                       )
-MESSAGE("| BUILD TYPE              : ${CMAKE_BUILD_TYPE}"                     )
-MESSAGE("| CMAKE_CXX_FLAGS_RELEASE : ${CMAKE_CXX_FLAGS_RELEASE}"              )
-MESSAGE("| CMAKE_CXX_FLAGS_DEBUG   : ${CMAKE_CXX_FLAGS_DEBUG}"                )
-MESSAGE("| CMAKE_CXX_FLAGS         : ${CMAKE_CXX_FLAGS}"                      )
-MESSAGE("| HEADER INSTALL DIR      : ${Xpress_HEADER_INSTALL_DIR}"            )
-MESSAGE("| LIB INSTALL DIR         : ${Xpress_LIB_INSTALL_DIR}"               )
-MESSAGE("| GENERATE ASSEMBLY       : ${GENERATE_ASM}"                         )
-MESSAGE("| TESTS                   : ${TESTS_STRING}"                         )
-MESSAGE("|==--------------------------------------------------------------==|")
+# _Note__: We install Xpress as a component of Voxel, so that other CMake
+#          applications can do Voxx::Xpress to use it.
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/Voxel/XpressConfigVersion.cmake"
+  VERSION       ${Xpress_VERSION}
+  COMPATIBILITY AnyNewerVersion)
+
+#export(EXPORT    XpressTargets
+#       FILE      "${CMAKE_CURRENT_BINARY_DIR}/Voxel/XpressTargets.cmake"
+#       NAMESPACE Voxx::)
+#export(EXPORT    XpressLibs
+#       FILE      "${CMAKE_CURRENT_BINARY_DIR}/Voxel/XpressLibs.cmake"
+#       NAMESPACE Voxx::)
+
+configure_file(cmake/XpressConfig.cmake
+               "${CMAKE_CURRENT_BINARY_DIR}/Voxel/XpressConfig.cmake"
+               COPYONLY)
+
+# This is relative to CMAKE_INSTALL_PREFIX:
+#set(ConfigPackageLocation lib/cmake/Voxel)
+#install(EXPORT      XpressTargets
+#        FILE        XpressTargets.cmake
+#        NAMESPACE   Voxx::
+#        DESTINATION ${ConfigPackageLocation})
+#install(EXPORT      XpressLibs
+#        FILE        XpressLibs.cmake
+#        NAMESPACE   Voxx::
+#        DESTINATION ${ConfigPackageLocation})
+
+set(ConfigPackageLocation lib/cmake/Voxel)
+# This also installs relative to CMAKE_INSTALL_PREFIX:
+install(
+  FILES       cmake/XpressConfig.cmake
+              "${CMAKE_CURRENT_BINARY_DIR}/Voxel/XpressConfigVersion.cmake"
+  DESTINATION ${ConfigPackageLocation})
+
+#==--- Print Configuration --------------------------------------------------==#
+
+message(
+"\n|==---------------------------------------------------------------------==|")
+message(
+  "| Configuration:                                                          |")
+message(
+  "|==---------------------------------------------------------------------==|")
+message("| Xpress VERSION          : ${Xpress_VERSION}"                        )
+message("| BUILD TYPE              : ${CMAKE_BUILD_TYPE}"                      )
+message("| CMAKE_CXX_FLAGS_RELEASE : ${CMAKE_CXX_FLAGS_RELEASE}"               )
+message("| CMAKE_CXX_FLAGS_DEBUG   : ${CMAKE_CXX_FLAGS_DEBUG}"                 )
+message("| CMAKE_CXX_FLAGS         : ${CMAKE_CXX_FLAGS}"                       )
+message("| INSTALL_PREFIX          : ${CMAKE_INSTALL_PREFIX}"                  )
+message("| VOXEL FOUND             : ${VOXEL_FOUND}"                           )
+message("| CUDA SUPPORTED          : ${CUDA_FOUND}"                            )
+message("| CUDA ROOT               : ${CUDA_TOOLKIT_ROOT_DIR}"                 )
+message("| PHYSICAL CORES          : ${VOXX_PHYSICAL_CORES}"                   )
+message("| LOGICAL CORES           : ${VOXX_LOGICAL_CORES}"                    )
+message("| CACHELINE SIZE          : ${VOXX_CACHELINE_SIZE}"                   )
+message("| CPU INTRINSICS          : ${VOXX_INTRINSICS}"                       )
+message(
+"|==---------------------------------------------------------------------==|\n")
